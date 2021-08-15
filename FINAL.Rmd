@@ -1,0 +1,2392 @@
+---
+title: "Finalresults"
+author: "Rita Martins"
+date: "8/8/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+```{r pressure, echo=FALSE}
+
+options(width=65, digits=4)
+library(XLConnect)
+library(rhdf5)
+library(dplyr)
+library(tibble)
+library("DESeq2")
+library("ggplot2")
+library(fgsea)
+library(ggplot2)
+library(pheatmap)
+library(vsn)
+library (ALDEx2)
+library(vegan)
+library(readxl)
+library("xlsx")
+library(tidyverse)
+install.packages("BiodiversityR")
+library(BiodiversityR)
+library(phyloseq)
+install.packages("BiodiversityR") 
+library (plotrix)
+options(width=65, digits=4)
+library(XLConnect)
+library(rhdf5)
+library(dplyr)
+library(tibble)
+library("DESeq2")
+library("ggplot2")
+library(fgsea)
+library(ggplot2)
+library(pheatmap)
+library(vsn)
+library (ALDEx2)
+library(vegan)
+library(readxl)
+library("xlsx")
+library(tidyverse)
+install.packages("BiodiversityR")
+library(BiodiversityR)
+library(phyloseq)
+install.packages("BiodiversityR") 
+library (plotrix)
+install.packages("HMP")
+library("HMP")
+library(speaq)
+
+View(data_rita)
+presamples<-data_rita[,c("AA09_pre_2","JS04_pre_2", "NB12_pre_1", "KO03_pre_2", "JH02_pre_2","QA06_pre_2",
+                             "PR08_pre_2","NR14_pre_1","NA05_pre", "KH10_pre", "VZ01_pre_2",
+                               "JF13_pre_2", "PF11_pre_1", "MO07_pre","MM16_pre")]
+postsamples<-data_rita[,c("AA09_post_1","JS04_post_1", "NB12_post_1", "KO03_post_1", "JH02_post_1","QA06_post_1",
+                             "PR08_post_1","NR14_post_1","NA05_post_1", "KH10_post_1", "VZ01_post_1",
+                               "JF13_post_1", "PF11_post_1", "MO07_post_1","MM16_post_1")]
+
+Phylumname<-data_rita[,c(1)]
+Ordername<-data_rita[,c(2)]
+Classname<-data_rita[,c(3)]
+Familyname<-data_rita[,c(4)]
+Genusname<-data_rita[,c(5)]
+```
+
+# Power calculations.
+```{r}
+ncol(presamples)
+nrow(presamples)
+ncol(postsamples)
+nrow(postsamples)
+
+fit_pre<-DM.MoM(presamples)
+fit_pos<-DM.MoM(postsamples)
+
+numMC<-1000
+
+nrsGrp1<-rep(10,15)
+nrsGrp2<-rep(10,15)
+
+group_Nrs<-list(nrsGrp1,nrsGrp2)
+
+alphap<-fit_pre$gamma
+
+pval1<-MC.Xdc.statistics(group_Nrs,numMC, alphap, "hnull")
+pval1
+
+alphap<-rbind(fit_pre$gamma,fit_pos$gamma)
+
+
+pval2<-MC.Xdc.statistics(group_Nrs,numMC, alphap)
+pval2
+
+library (pwr)
+
+# power calculation no diffenrence in shannon
+
+aggregate ( formula=shannon_phylumOTU~Group,data=shannon_phylumOTUfinalfinal, FUN=var)
+n1<-15
+n2<-15
+s1<-sqrt(0.08911416)
+s2<-sqrt(0.09073373)
+
+s= sqrt((n1-1)*s1^2+(n2-1)*s2^2)/(n1+n2-2)
+s
+
+library(plyr)
+mu<-ddply(shannon_phylumOTUfinalfinal,"Group", summarise, grp.mean= mean(shannon_phylumOTU))
+head(mu)
+power.t.test(n=2:20,delta= 0.9050722-0.7904042, sd=0.05667071)
+power.t.test(n=15,delta= 0.9050722-0.7904042, sd=0.05667071)
+
+#using anova
+
+View(shannon_phylumOTUfinalfinal)
+fit= lm(formula=shannon_phylumOTU~Group,data=shannon_phylumOTUfinalfinal)
+anova(fit)
+library(pwr)
+pwr.anova.test(f=0.561, k = 4, n=30 ,sig.level=0.05)
+```
+
+
+DESEQ
+```{r}
+#Abundance DESEQ
+library(DESeq2)
+install.packages("GUniFrac")
+library(GUniFrac)
+
+
+#PHYLUM
+View(preandposttablesum)
+otu_tab<-rbind(postsamplesphylumsumtable[,-c(9)], presamplesphylumsumtable[,-c(9)])
+View(otu_tab)
+  
+View(otu_tab)
+head(otu_tab)
+row.names(otu_tab)
+otu_tabt<-t(otu_tab)
+otu_tab_f<-data.frame(otu_tabt)
+View(otu_tab_f)
+otu_tab_final<-otu_tab_f[,c(16,1,17,2,18,3,19,4,20,5,21,6,22,7,23,8,24,9,25,10,26,11,27,12,28,13,29,14,30,15)]
+countdata<-as(otu_tab_final, "matrix")
+View(countdata)
+colnames(countdata)<-c("AA09_pre", "AA09_post", "JS04_pre","JS04_post", "NB12_pre", "NB12_post","KO03_pre",
+"KO03_post","JH02_pre","JH02_post", "QA06_pre"," QA06_post","PR08_pre", "PR08_post", "NR14_pre","NR14_post",
+"NA05_pre", "NA05_post","KH10_pre","KH10_post", "VZ01_pre","VZ01_post",
+"JF13_pre", "JF13_post","PF11_pre", "PF11_post", "MO07_pre","MO07_post", "MM16_pre", "MM16_post")
+
+head(countdata)
+
+group<-c("1","2","1","2","1","2","1","2","1","2","1","2","1","2","1","2","1","2","1","2","1","2",
+         "1","2","1","2","1","2","1","2")
+         
+print(group)
+metadata<-data.frame(row.names=colnames(countdata), group=group)
+head(metadata)
+
+
+dds<-DESeqDataSetFromMatrix(countData=countdata,colData=metadata,design=~group)
+
+ncol(countdata)
+nrow(metadata)
+dds<-dds[rowSums(counts(dds))>0,]
+dds
+
+dds<-estimateSizeFactors(dds)
+
+dds<-estimateDispersions(dds)
+
+dds<-DESeq(dds)
+
+res<-results(dds)
+res
+
+mcols(res,use.names = TRUE)
+
+plotMA(res)
+
+rld<-rlog(dds)
+vst<-varianceStabilizingTransformation(dds)
+
+par(mfrow=c(1,3))
+plot(log2(1+counts(dds,normalized=TRUE)[,1:2]), main="ordinary log2 transformation",
+     col="#00000020",pch=20,cex=2)
+
+plot(assay(rld)[,1:2],main="Regularized~logarith transformation(rlog)",col="#00000020",pch=20,cex=2)
+
+plot(assay(vst)[,1:2],main="Variance stabiling transformation(rlog)",col="#00000020",pch=20,cex=2)
+
+
+library(ggplot2)
+install.packages("RColorBrewer")
+library("RColorBrewer")
+library("genefilter")
+library(SummarizedExperiment)
+topVarGenes<-head(order(rowVars(assay(rld)),decreasing=TRUE),10)
+heatmap(assay(rld),scale="row",
+          col=colorRampPalette(rev(brewer.pal(9,"RdBu")))(255))
+
+library(pheatmap)
+pheatmap(assay(rld),cluster_rows=FALSE,show_rownames=TRUE,cluster_cols=FALSE,show_colnames=TRUE,
+annotation_col=metadata)
+                             
+pheatmap(assay(rld),cluster_rows=FALSE,show_rownames=TRUE,cluster_cols=FALSE,show_colnames=TRUE)
+```
+
+```{r}
+#DESEQ Genus
+View(preandpostsamplesgenussum)
+otu_tab<-preandpostsamplesgenussum
+View(otu_tab)
+  
+View(otu_tab)
+head(otu_tab)
+row.names(otu_tab)
+
+otu_tabt<-t(otu_tab)
+otu_tab_f<-data.frame(otu_tabt)
+View(otu_tab_f)
+otu_tab_final<-otu_tab_f[,c(16,1,17,2,18,3,19,4,20,5,21,6,22,7,23,8,24,9,25,10,26,11,27,12,28,13,29,14,30,15)]
+View(otu_tab_final)
+
+countdata<-as(otu_tab_final, "matrix")
+View(countdata)
+
+
+colnames(countdata)<-c("AA09_pre", "AA09_post", "JS04_pre","JS04_post", "NB12_pre", "NB12_post","KO03_pre",
+"KO03_post","JH02_pre","JH02_post", "QA06_pre"," QA06_post","PR08_pre", "PR08_post", "NR14_pre","NR14_post", "NA05_pre", "NA05_post","KH10_pre","KH10_post", "VZ01_pre","VZ01_post","JF13_pre", "JF13_post","PF11_pre","PF11_post", "MO07_pre","MO07_post","MM16_pre", "MM16_post")
+
+head(countdata)
+
+group<-c("1","2","1","2","1","2","1","2","1","2","1","2","1","2","1","2","1","2","1","2","1","2",
+         "1","2","1","2","1","2","1","2")
+         
+print(group)
+metadata<-data.frame(row.names=colnames(countdata), group=group)
+head(metadata)
+
+
+dds<-DESeqDataSetFromMatrix(countData=countdata,colData=metadata,design=~group)
+
+ncol(countdata)
+nrow(metadata)
+dds<-dds[rowSums(counts(dds))>0,]
+dds
+
+dds<-estimateSizeFactors(dds)
+
+dds<-estimateDispersions(dds)
+
+dds<-DESeq(dds)
+
+res<-results(dds)
+res
+
+mcols(res,use.names = TRUE)
+
+plotMA(res)
+
+rld<-rlog(dds)
+vst<-varianceStabilizingTransformation(dds)
+
+par(mfrow=c(1,3))
+plot(log2(1+counts(dds,normalized=TRUE)[,1:2]), main="ordinary log2 transformation",
+     col="#00000020",pch=20,cex=2)
+
+plot(assay(rld)[,1:2],main="Regularized~logarith transformation(rlog)",col="#00000020",pch=20,cex=2)
+
+plot(assay(vst)[,1:2],main="Variance stabiling transformation(rlog)",col="#00000020",pch=20,cex=2)
+
+
+library(ggplot2)
+install.packages("RColorBrewer")
+library("RColorBrewer")
+library("genefilter")
+library(SummarizedExperiment)
+topVarGenes<-order(assay(rld),decreasing=TRUE)
+heatmap(assay(rld),cluster_columns = FALSE,
+          col=colorRampPalette(rev(brewer.pal(9,"RdBu")))(255))
+          
+
+
+pheatmap(assay(rld),topVarGenes,cluster_rows=FALSE,show_rownames=TRUE,cluster_cols=FALSE,show_colnames=TRUE,fontsize_row=6, annotation_colors = ann_colors)
+
+pheatmap(assay(rld),cluster_rows=FALSE,show_rownames=TRUE,cluster_cols=FALSE,show_colnames=TRUE,fontsize_row=6)
+```
+
+```{r} 
+#1. Phylum pre intervention
+presamplesphylum<-data_rita[,c("Phylum","AA09_pre_2","JS04_pre_2", "NB12_pre_1", "KO03_pre_2", "JH02_pre_2","QA06_pre_2",
+                               "PR08_pre_2","NR14_pre_1","NA05_pre", "KH10_pre", "VZ01_pre_2",
+                               "JF13_pre_2", "PF11_pre_1", "MO07_pre","MM16_pre")]
+
+View(presamplesphylumsum)
+presamplesphylumsumtable<-t(presamplesphylumsum[,-1])
+names<-presamplesphylumsum[,c("Phylum")]
+transposenames<-as.vector(t(names))
+colnames(presamplesphylumsumtable)<-transposenames
+
+View(presamplesphylumsumtable)
+
+#2. Phylum post intervention
+postsamplesphylum<-data_rita[,c("Phylum","AA09_post_1","JS04_post_1", "NB12_post_1", "KO03_post_1", "JH02_post_1","QA06_post_1",
+                                "PR08_post_1","NR14_post_1","NA05_post_1", "KH10_post_1", "VZ01_post_1",
+                                "JF13_post_1", "PF11_post_1", "MO07_post_1","MM16_post_1")]
+
+View(postsamplesphylum)
+postsamplesphylumsum<-postsamplesphylum %>% group_by(Phylum) %>% summarise_all(funs(sum))
+view(postsamplesphylumsum)
+postsamplesphylumsumtable<-t(postsamplesphylumsum[,-1])
+namespost<-postsamplesphylumsum[,c("Phylum")]
+transposenamespost<-as.vector(t(namespost))
+colnames(postsamplesphylumsumtable)<-transposenamespost
+
+preandpost<-merge(postsamplesphylumsum,presamplesphylumsum)
+
+preandposttablesum<-t(preandpost[,-1])
+namespostpreandpost<-preandpost["Phylum"]
+transposenamespost<-as.vector(t(namespostpreandpost))
+colnames(preandposttablesum)<-transposenamespost
+
+row.names(metadata)<-row.names(preandposttablesum)
+sampledata = data.frame(c(2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1))
+names(sampledata)<-c("group")
+names(sampledata)<-c("group")
+sampledata$Group<-with(sampledata, group)
+sampledata$Group<-as.factor(sampledata$Group)
+lapply(sampledata,class)
+
+View(subject)
+sampledata=cbind(sampledata,subject)
+row.names(sampledata)<-row.names(preandposttablesum)
+
+#3.1.Plot Richness
+OTU = otu_table(preandposttablesum,taxa_are_rows=FALSE)
+OTU
+SAM <-sample_data(sampledata,errorIfNULL = TRUE)
+sample_names(OTU)
+sample_names(SAM)
+
+physeq<-merge_phyloseq(phyloseq(OTU),SAM)
+physeq
+
+
+plot_richness(physeq,measures=c("shannon","simpson"),x="Group",color="subject")+labs(title="Shannon and Simpson diversity variation through time, by sample (Phylum level)",
+       x ="Time", y = "Diversity Index")
+
+p<-plot_richness(physeq,measures=c("shannon"),x="Group",color="subject")  
+p+labs(title="Shannon diversity variation through time, by sample (Phylum level)",
+       x ="Time", y = "Shannon Diversity Index")
+```
+
+#Genus
+```{r}      
+#1.1.Genus pre intervention
+presamplesgenus<-data_rita[,c("Genus","AA09_pre_2","JS04_pre_2", "NB12_pre_1", "KO03_pre_2", "JH02_pre_2","QA06_pre_2",
+                               "PR08_pre_2","NR14_pre_1","NA05_pre", "KH10_pre", "VZ01_pre_2",
+                               "JF13_pre_2", "PF11_pre_1", "MO07_pre","MM16_pre")]
+
+View(presamplesgenus)
+presamplesgenussum<-presamplesgenus %>% group_by(Genus) %>% summarise_all(funs(sum))
+View(presamplesgenus)
+presamplesgenussum<-t(presamples[,-1])
+names<-presamplesgenus[,c("Genus")]
+transposenames<-as.vector(t(names))
+colnames(presamplesgenussum)<-transposenames
+
+View(presamplesgenussum)
+
+
+#1.1.Genus post intervention
+postsamplesgenus<-data_rita[,c("Genus","AA09_post_1","JS04_post_1", "NB12_post_1", "KO03_post_1", "JH02_post_1","QA06_post_1",
+                                "PR08_post_1","NR14_post_1","NA05_post_1", "KH10_post_1", "VZ01_post_1",
+                                "JF13_post_1", "PF11_post_1", "MO07_post_1","MM16_post_1")]
+
+View(postsamplesgenus)
+postsamplesgenussum<-postsamplesgenus %>% group_by(Genus) %>% summarise_all(funs(sum))
+View(postsamplesgenussum)
+names<-postsamplesgenussum[,c("Genus")]
+View(names)
+transposenames<-as.vector(t(names))
+postsamplesgenussum<-t(postsamplesgenussum[,-1])
+colnames(postsamplesgenussum)<-transposenames
+ncol(postsamplesgenussum)
+nrow(names)
+View(postsamplesgenussum)
+
+# Genuspreandpost
+preandpostgenus<-data_rita[,c("Genus","AA09_post_1","JS04_post_1", "NB12_post_1", "KO03_post_1", "JH02_post_1","QA06_post_1",
+                                "PR08_post_1","NR14_post_1","NA05_post_1", "KH10_post_1", "VZ01_post_1",
+                                "JF13_post_1", "PF11_post_1", "MO07_post_1","MM16_post_1","AA09_pre_2","JS04_pre_2", "NB12_pre_1", "KO03_pre_2", "JH02_pre_2","QA06_pre_2",
+                               "PR08_pre_2","NR14_pre_1","NA05_pre", "KH10_pre", "VZ01_pre_2",
+                               "JF13_pre_2", "PF11_pre_1", "MO07_pre","MM16_pre")]
+preandpostsamplesgenussum<-preandpostgenus %>% group_by(Genus) %>% summarise_all(funs(sum))
+names<-preandpostsamplesgenussum[,c("Genus")]
+View(names)
+transposenames<-as.vector(t(names))
+preandpostsamplesgenussum<-t(preandpostsamplesgenussum[,-1])
+colnames(preandpostsamplesgenussum)<-transposenames
+View(preandpostsamplesgenussum)
+                               
+
+sampledata = data.frame(c(2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1))
+row.names(metadata)<-row.names(preandpostsamplesgenussum)
+names(sampledata)<-c("group")
+names(sampledata)<-c("group")
+sampledata$Group<-with(sampledata, group)
+sampledata$Group<-as.factor(sampledata$Group)
+lapply(sampledata,class)
+
+View(subject)
+sampledata=cbind(sampledata,subject)
+row.names(sampledata)<-row.names(preandpostsamplesgenussum)
+
+#Genus-physeq
+OTU = otu_table(preandpostsamplesgenussum,taxa_are_rows=FALSE)
+OTU
+SAM <-sample_data(sampledata,errorIfNULL = TRUE)
+sample_names(OTU)
+sample_names(SAM)
+
+physeq<-merge_phyloseq(phyloseq(OTU),SAM)
+physeq
+plot_richness(physeq,x="Group")
+
+
+plot_richness(physeq,measures=c("shannon","simpson"),x="Group",color="subject")+labs(title="Shannon and Simpson diversity variation through time, by sample (Genus level)",
+       x ="Time", y = "Diversity Index")
+
+p<-plot_richness(physeq,measures=c("shannon"),x="Group",color="subject")  
+p+labs(title="Shannon diversity variation through time, by sample (Genus level)",
+       x ="Time", y = "Shannon Diversity Index")
+```
+
+```{r}
+
+Group<-c(2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1)
+
+#4.Principal Component Analysis (PCA)
+
+#in microbiome data analysis, the absolute 
+#abundance counts are not appropriate because the large values will have 
+#too high influence in the analysis.THus we need to standardize the abundance read
+#data before analysos. Here, we use the function decostand() with
+#total method to standardize read.
+
+stand_preandposttablesum <-decostand (preandposttablesum,method="total")
+row.names(stand_preandposttablesum)<-c("AA09_post", "JS04_post", "NB12_post", "KO03_post", "JH02_post" ,"QA06_post","PR08_post", "NR14_post", "NA05_post", "KH10_post", "VZ01_post", "JF13_post",
+"PF11_post","MO07_post", "MM16_post", "AA09_pre","JS04_pre","NB12_pre", 
+"KO03_pre" , "JH02_pre" , "QA06_pre" , "PR08_pre" , "NR14_pre" , "NA05_pre",  
+"KH10_pre",   "VZ01_pre" , "JF13_pre"  ,"PF11_pre" , "MO07_pre","MM16_pre")
+View(stand_preandposttablesum)
+PCA<-rda(stand_preandposttablesum)
+PCA
+
+x=0.1073/0.138
+x
+
+
+#In vegans language, "Inertia" is the general term of "variation" in the data. 
+#Total variation of the whole dataset is 0,138 in this case, and the first axis 
+#explain  77,75% of total variotion (0.1073/0.138).Total variation is a 
+#sum of variations of each genus in analyzes matrix. 
+
+totalvariance<-sum(apply(stand_preandposttablesum,2,var))
+totalvariance
+
+#The display option "species" is the vegan package label for OTUs/taxa. 
+#Default is "sites"(label for samples)
+
+biplot(PCA, display="species")
+
+#more informative
+ordiplot(PCA,display="sites",type="text")
+
+#we can use clenapot(pca) to intend the drawing PCA results to two diagram 
+#and differing by scaling#
+library("vegan")
+res.pca<-rda(stand_preandposttablesum)
+ax1=1
+ax2=2
+ahead=0.07
+cex=0.7
+
+"cleanplot.pca" <- function(res.pca, ax1=1, ax2=2, point=FALSE,
+                            ahead=0.07, cex=0.7)
+
+{
+  # A function to draw two biplots (scaling 1 and scaling 2) from an object # of class "rda" (PCA or RDA result from vegan's rda() function)
+  #
+  # License: GPL-2
+  # Authors: Francois Gillet & Daniel Borcard, 24 August 2012
+  
+require("vegan")
+
+par(mfrow=c(1,1))
+p <- length(res.pca$CA$eig)
+p
+res.pca
+# Scaling 1: "species" scores scaled to relative eigenvalues
+sit.sc1 <- scores(res.pca, display="wa", scaling=1, choices=c(1:p))
+spe.sc1 <- scores(res.pca, display="sp", scaling=1, choices=c(1:p))
+plot(res.pca, choices=c(ax1,ax2), display=c("wa", "sp"), type="n",
+main="PCA - scaling 1", scaling=1) 
+if (point)
+     {
+points(sit.sc1[,ax1], sit.sc1[,ax2],pch=20) 
+text(res.pca, display="wa", choices=c(ax1, ax2), cex=cex,
+pos=3, scaling=1)                                                                                                                                      }
+else
+{
+  text(res.pca, display="wa", choices=c(ax1, ax2), cex=cex, scaling=1)
+}
+text(res.pca, display="sp", choices=c(ax1, ax2), cex=cex, pos=2, col="red", scaling=1)
+arrows(0, 0, spe.sc1[,ax1], spe.sc1[,ax2], length=ahead, angle=20, col="red")
+pcacircle(res.pca)
+
+# Scaling 2: site scores scaled to relative eigenvalues 
+sit.sc2 <- scores(res.pca, display="wa", choices=c(1:p)) 
+spe.sc2 <- scores(res.pca, display="sp", choices=c(1:p))
+plot(res.pca, choices=c(ax1,ax2), display=c("wa","sp"), type="n", main="PCA - scaling 2")
+if (point) {
+  points(sit.sc2[,ax1], sit.sc2[,ax2], pch=20)
+  text(res.pca, display="wa", choices=c(ax1 ,ax2), cex=cex, pos=3)
+}
+else
+{
+  text(res.pca, display="wa", choices=c(ax1, ax2), cex=0.75)
+}
+text(res.pca, display="sp", choices=c(ax1, ax2), cex=1, pos=4, col="red")
+arrows(0, 0, spe.sc2[,ax1], spe.sc2[,ax2], length=ahead, angle=20, col="red")
+}
+pcacircle(res.pca)
+"pcacircle" <- function (pca)
+{
+# Draws a circle of equilibrium contribution on a PCA plot # generated from a vegan analysis.
+# vegan uses special constants for its outputs, hence # the 'const' valuebelow.
+  
+eigenv <- pca$CA$eig
+p  <-  length(eigenv) 
+n <- nrow(pca$CA$u)
+tot <- sum(eigenv)
+const <- ((n - 1) * tot)^0.25 
+radius <- (2/p)^0.5
+radius <- radius * const
+symbols(0, 0, circles=radius, inches=FALSE, add=TRUE, fg=2)
+}
+cleanplot.pca (PCA)
+ordiellipse(PCA,Grouppreandpost, display="sites", 
+             conf=0.95, label=T, 
+ 677777           lwd=2, col=c("blue","green"))
+
+#ordispider(PCA, Group, label=T, lwd=2, col=c("wheat","slategray1",draw="polygon"))
+
+#'“Scaling” is the way that the ordination results are projected in the reduced space for graphical display (Borcard et al. 2011). The function cleanplot.pca() generates two PCA scalings.
+#'PCA-scaling 1 in the left ﬁgure is distance biplot, which focuses on distances among samples. If you’re mainly interested to interpret the relationships among samples, choose Scaling 1. 
+#'The essential features of Scaling 1 are:
+#'The eigenvectors are scaled to unit length and the distances among samples (subjects) in the biplot are approximations of their Euclidean distances in
+#multidimensional space. However, the angles among variables (bacteria in this case) vectors are meaningless. The circle is called circle of equilibrium contribution, representing the equilibrium contribution of the variables. For given combination of axes, the variables with vectors longer than the radius of the circle could be interpreted with conﬁdence as most important bacteria, whereas the variables have vectors shorter than the radius of the equilibrium contribution circle contribute little to a given reduced space.
+#PCA-scaling 2 in the right ﬁgure is correlation biplot. It plots the correlation among variables (bacteria in this case). If your main interest focuses on the rela- tionships among variables, choose scaling 2. The essential features of Scaling 2 are: Each eigenvectors is scaled to the square root of its eigenvalue; the length of vector approximates standard deviation of variables (bacteria); the angles between variables (bacteria in this case) reflect their correlations: the cosine of angle approximates correlation between variables (bacteria); however, the distances among samples (subjects) in the biplot are not approximations of their Euclidean
+#distances in multidimensional space.
+```
+
+           
+# metabolomic 
+
+```{r}
+library(speaq)
+
+rita_data <- read_excel("~/Desktop/project2/rita_data.xlsx", sheet = "NMR_data")
+View(rita_data) 
+rita_data<-as.matrix(rita_data)
+nmr_rita<-rita_data[,c("AA09_1", "AA09_2","JF13_1", "JF13_2", "JH02_1", "JH02_2", "JS04_1", "JS04_2",
+                     "KH10_1", "KH10_2", "KO03_1", "KO03_2", "MM16_1","MM16_2", "MO07_1", "MO07_2",
+                     "NA05_1", "NA05_2", "NB12_1", "NB12_2", "NR14_1", "NR14_2", "PF11_1", "PF11_2",
+                      "PR08_1", "PR08_2", "QA06_1","QA06_2", "VZ01_1", "VZ01_2")]
+View(nmr_rita)
+colnames(nmr_rita)<-c("AA09_pre", "AA09_post","JF13_pre", "JF13_post","JH02_pre","JH02_post",
+                      "JS04_pre","JS04_post", "KH10_pre","KH10_post","KO03_pre",
+                      "KO03_post","MM16_pre", "MM16_post","MO07_pre","MO07_post",
+                      "NA05_pre", "NA05_post","NB12_pre", "NB12_post","NR14_pre","NR14_post",
+                      "PF11_pre", "PF11_post","PR08_pre", "PR08_post",  "QA06_pre"," QA06_post"
+                  ,"VZ01_pre","VZ01_post")
+
+#Y.spec
+nmr_ritatable<-t(nmr_rita)
+View(nmr_ritatable)
+spectra<-as.matrix(nmr_ritatable)
+spectra
+View(spectra)
+
+#X.ppm
+View(spectra)
+ppmf<-rita_data[,c("ppm")]
+View(ppmf)
+ppmts<-t(ppmf)
+View(ppmts)
+ppm <- as.numeric(ppmts)
+
+#sample.labels
+View(nmr_ritatable)
+samplelabels<-row.names(nmr_ritatable)
+samplelabelsgraph<-as.factor(samplelabels)
+View(samplelabelsgraph)
+View(subject)
+subjectgraph<-as.factor(subject)
+
+AddPlottingStuff(test.peaks, X.ppm = ppm)
+
+getWaveletPeaks(spectra, ppm)
+getWaveletPeaks(
+  Y.spec,
+  X.ppm,
+  sample.labels = NULL,
+  window.width = "small",
+  window.split = 4,
+  scales = seq(1, 16, 1),
+  baselineThresh = 1000,
+  SNR.Th = -1,
+  nCPU = -1,
+  include_nearbyPeaks = TRUE,
+  raw_peakheight = FALSE,
+  duplicate_detection_multiplier = 1
+)
+
+plot.marks <- as.numeric(Grouppreandpost)
+plot.marks <- 8 
+cp1 <- 1
+cp2 <- 2 
+plot(scores[,cp1]/max(scores[,cp1]), scores[,cp2]/max(scores[,cp2]),
+     main=paste("Metabolomic PCA, PC",cp1," vs. PC",cp2,sep=""),
+     xlab=paste("PC",cp1,round(varExplained[cp1]/sum(varExplained),digits=2),""),
+     ylab=paste("PC",cp2,round(varExplained[cp2]/sum(varExplained),digits=2),""),
+     pch = plot.marks,
+     xlim = c(-0.7, 0.00),
+     ylim = c(0.05, 0.35))
+text(scores[,cp1]/max(scores[,cp1]),scores[,cp2]/max(scores[,cp2]),samplelabels, cex=1, pos=4, col=c("blue"))
+lines(x = c(-200,200), y = c(0,0))
+lines(x = c(0,0), y = c(-200,200))
+
+p.all_bonfGrouppreandpost<- speaq::relevant.features.p(datamatrix = spectra.Features.scaled,
+                                                        response =Grouppreandpost, 
+                                                        p.adj = "bonferroni")
+
+p.all_fdrGrouppreandpost<- speaq::relevant.features.p(datamatrix = spectra.Features.scaled,
+                                                       response =Grouppreandpost, 
+                                                       p.adj = "fdr")
+
+p.all_BHGrouppreandpost<- speaq::relevant.features.p(datamatrix = spectra.Features.scaled,
+                                                      response =Grouppreandpost, 
+                                                      p.adj = "BH")
+p.all_noadjGrouppreandpost<- speaq::relevant.features.p(datamatrix = spectra.Features.scaled,
+                                                     response =Grouppreandpost, 
+                                                     p.adj = "none")
+                                                     
+```
+ 
+View(preandposttablesum)
+#Other groups -shannon
+```{r}
+row.names(preandposttablesum)
+row.names(preandposttablesum)<-c("AA09_post", "JS04_post", "NB12_post", "KO03_post", "JH02_post" ,"QA06_post","PR08_post", "NR14_post", "NA05_post", "KH10_post", "VZ01_post", "JF13_post",
+"PF11_post","MO07_post", "MM16_post", "AA09_pre","JS04_pre","NB12_pre", 
+"KO03_pre" , "JH02_pre" , "QA06_pre" , "PR08_pre" , "NR14_pre" , "NA05_pre",  
+"KH10_pre",   "VZ01_pre" , "JF13_pre"  ,"PF11_pre" , "MO07_pre","MM16_pre")
+
+shannon1abundance<-preandposttablesum[c("MM16_post","MM16_pre",                               "VZ01_post","VZ01_pre","NA05_post","NA05_pre","NR14_post","NR14_pre","PF11_post",
+"PF11_pre","PR08_post","PR08_pre","AA09_pre","AA09_post"),]
+
+View(shannon1abundance)
+OTU = otu_table(shannon1abundance,taxa_are_rows=FALSE)
+OTU
+row.names(shannon1abundance)
+sampledata = data.frame(c(2,1,2,1,2,1,2,1,2,1,2,1,2,1))
+subjectshannon1<-data.frame(c("MM16","MM16",                               "VZ01","VZ01","NA05","NA05","NR14","NR14","PF11","PF11","PR08","PR08","AA09","AA09"))
+colnames(subjectshannon1)<-"subject"
+View(subjectshannon1)
+row.names(sampledata)<-row.names(shannon1abundance)
+View(sampledata)
+names(sampledata)<-c("group")
+sampledata$Group<-with(sampledata, group)
+sampledata$Group<-as.factor(sampledata$Group)
+lapply(sampledata,class)
+sampledata<-cbind(sampledata,subjectshannon1)
+SAM <-sample_data(sampledata,errorIfNULL = TRUE)
+sample_names(OTU)
+sample_names(SAM)
+
+physeq<-merge_phyloseq(phyloseq(OTU),SAM)
+physeq
+View(physeq)
+plot_richness(physeq,measures=c("shannon","simpson"),x="Group")
+plot_richness(physeq,measures=c("shannon"),x="Group",color="subject")+labs(title="Shannon diversity variation through time, by sample (Phylum level), Group1",
+       x ="Time", y = "Diversity Index")
+```
+
+
+```{r}
+shannon2abundance<-preandposttablesum[c("JF13_post", "JF13_pre","JH02_post", "JH02_pre","KH10_post", "KH10_pre","KO03_post","KO03_pre","MO07_post","MO07_pre","NB12_post","NB12_pre","QA06_post","QA06_pre"),]
+View(shannon2abundance)
+OTU = otu_table(shannon2abundance,taxa_are_rows=FALSE)
+OTU
+row.names(shannon2abundance)
+sampledata = data.frame(c(2,1,2,1,2,1,2,1,2,1,2,1,2,1))
+subjectshannon2<-data.frame(c("JF13","JF13",                               "JH02","JH02","KH10","KH10","KO03","KO03","MO07","MO07","NB12","NB12","QA06","QA06"))
+colnames(subjectshannon2)<-"subject"
+View(subjectshannon2)
+row.names(sampledata)<-row.names(shannon2abundance)
+View(sampledata)
+names(sampledata)<-c("group")
+sampledata$Group<-with(sampledata, group)
+sampledata$Group<-as.factor(sampledata$Group)
+lapply(sampledata,class)
+sampledata<-cbind(sampledata,subjectshannon2)
+SAM <-sample_data(sampledata,errorIfNULL = TRUE)
+sample_names(OTU)
+sample_names(SAM)
+
+physeq<-merge_phyloseq(phyloseq(OTU),SAM)
+physeq
+View(physeq)
+plot_richness(physeq,measures=c("shannon","simpson"),x="Group")
+plot_richness(physeq,measures=c("shannon"),x="Group",color="subject")+labs(title="Shannon diversity variation through time, by sample (Phylum level), Group2",
+       x ="Time", y = "Diversity Index")
+shannon_phylumgroup2<-diversity(shannon2abundance, index="shannon", MARGIN=1)
+view(shannon_phylumgroup2)
+```
+
+```{r}
+
+shannon_phylumgroup1<-shannon_phylumOTUfinalfinal[c("MM16_post_1","MM16_pre", "VZ01_post_1","VZ01_pre_2",
+                                                    "NA05_post_1","NA05_pre","NR14_post_1","NR14_pre_1",
+                                                    "PF11_post_1","PF11_pre_1","PR08_post_1","PR08_pre_2",
+                                                    "AA09_pre_2","AA09_post_1"),]
+
+shannon_phylumgroup2<-shannon_phylumOTUfinalfinal[c("JF13_post_1", "JF13_pre_2","JH02_post_1", "JH02_pre_2",
+                                                    "KH10_post_1",
+                                                    "KH10_pre","KO03_post_1","KO03_pre_2",
+                                                    "MO07_post_1","MO07_pre","NB12_post_1","NB12_pre_1",
+                                                    "QA06_post_1","QA06_pre_2"),]
+
+
+shannonsum<-rbind(shannon_phylumgroup1,shannon_phylumgroup2)
+View(shannonsum)
+sampledatadiversityshannon = data.frame(c(1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2))
+row.names(sampledatadiversityshannon)<-row.names(shannonsum)
+names(sampledatadiversityshannon)<-c("group")
+shannonsum$Group<-with(sampledatadiversityshannon, group)
+View(shannonsum)
+
+library(ggplot2)
+p<-ggplot(shannonsum,aes(x=shannon_phylum))+geom_histogram(color="black", fill="black") + facet_grid  (Group~.)
+
+library(plyr)
+mu<-ddply(shannonsum,"Group", summarise, grp.mean=mean(shannon_phylumOTU))
+head(mu)
+
+
+fit_w<-wilcox.test(shannon_phylumOTU~ Group, data=shannonsum)
+fit_w
+
+fit_w<-wilcox.test( shannon_phylumOTU~ Group, data=shannon_phylumgroup1)
+fit_w
+
+fit_w<-wilcox.test( shannon_phylumOTU~ Group, data=shannon_phylumgroup2)
+fit_w
+
+```
+
+
+
+
+
+
+
+```{r}
+#Cinical data 
+library(readxl)
+clinicaldata <- read_excel("~/Desktop/project2/clinicaldata.xlsx", sheet = "clinicalpeandpos")
+clinicaldatashannon<-clinicaldata[-c(29,30),]
+View(clinicaldatashannon)
+
+clinicaldatashannondf<-data.frame(clinicaldatashannon)
+row.names(clinicaldatashannondf)<-row.names(preandposttablesum)
+View(clinicaldatashannondf)
+clinicaldatashannondf<-clinicaldatashannondf[,-1]
+View(clinicaldatashannondf)
+
+View(shannon_phylumOTUfinalfinal)
+
+
+clinicaldatashannonOTUdf<-cbind(shannon_phylumOTUfinalfinal,clinicaldatashannondf)
+View(clinicaldatashannonOTUdf)
+
+shannon_phylumOTUfinal<-clinicaldatashannonOTUdf[-c(2,17),]
+View(shannon_phylumOTUfinal)
+
+Groupshannondf<-c(1,2,1,2,2,1,1,1,2,1,2,1,2,1,1,2,1,2,2,1,1,1,2,1,2,1,2,1)
+clinicaldatashannonOTUdf<-cbind(shannon_phylumOTUfinal,Groupshannondf)
+View(clinicaldatashannonOTUdf)
+```
+
+```{r}
+
+shannon_phylumgroup1<-shannon_phylumOTUfinalfinal[c("MM16_post_1","MM16_pre", "VZ01_post_1","VZ01_pre_2",
+                                                    "NA05_post_1","NA05_pre","NR14_post_1","NR14_pre_1",
+                                                    "PF11_post_1","PF11_pre_1","PR08_post_1","PR08_pre_2",
+                                                    "AA09_pre_2","AA09_post_1"),]
+
+shannon_phylumgroup2<-shannon_phylumOTUfinalfinal[c("JF13_post_1", "JF13_pre_2","JH02_post_1", "JH02_pre_2",
+                                                    "KH10_post_1",
+                                                    "KH10_pre","KO03_post_1","KO03_pre_2",
+                                                    "MO07_post_1","MO07_pre","NB12_post_1","NB12_pre_1",
+                                                    "QA06_post_1","QA06_pre_2"),]
+
+View(shannon_phylumgroup2)
+
+shannonsum<-rbind(shannon_phylumgroup1,shannon_phylumgroup2)
+View(shannonsum)
+sampledatadiversityshannon = data.frame(c(1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2,2,2,2,2,2,2))
+row.names(sampledatadiversityshannon)<-row.names(shannonsum)
+names(sampledatadiversityshannon)<-c("groupdiversity")
+
+shannonsumf<-cbind(shannonsum,sampledatadiversityshannon)
+View(shannonsumf)
+
+fit_w<-wilcox.test(shannon_phylumOTU ~ Group, data=shannonsumf)
+fit_w
+
+fit_w<-wilcox.test( shannon_phylumOTU~ Group, data=shannon_phylumgroup1)
+fit_w
+
+fit_w<-wilcox.test( shannon_phylumOTU~ Group, data=shannon_phylumgroup2)
+fit_w
+```
+
+```{r}
+#Shannon group analysis
+#clinicaldata <- read_excel("~/Desktop/project2/clinicaldata.xlsx", sheet = "clinicalpeandpos")
+View(clinicaldata)
+clinicaldatashannon<-clinicaldata[-c(29,30),]
+View(clinicaldatashannon)
+
+clinicaldatashannondf<-data.frame(clinicaldatashannon)
+row.names(clinicaldatashannondf)<-row.names(preandposttablesum)
+View(clinicaldatashannondf)
+clinicaldatashannondf<-clinicaldatashannondf[,-1]
+View(clinicaldatashannondf)
+
+View(shannon_phylumOTUfinalfinal)
+
+clinicaldatashannonOTUdf<-cbind(shannon_phylumOTUfinalfinal,clinicaldatashannondf)
+View(clinicaldatashannonOTUdf)
+
+shannon_phylumOTUfinal<-clinicaldatashannonOTUdf[-c(2,17),]
+View(shannon_phylumOTUfinal)
+
+Groupshannondf<-c(1,2,1,2,2,1,1,1,2,1,2,1,2,1,1,2,1,2,2,1,1,1,2,1,2,1,2,1)
+clinicaldatashannonOTUdf<-cbind(shannon_phylumOTUfinal,Groupshannondf)
+View(clinicaldatashannonOTUdf)
+
+Grouppreandpostnamenew<-data.frame("pos","pos","pos","pos","pos","pos","pos","pos","pos","pos","pos","pos","pos","pos",
+                       "pre","pre","pre","pre","pre","pre","pre","pre","pre","pre","pre","pre","pre","pre")
+
+
+Grouppreandpostnamenew<-t(Grouppreandpostnamenew)
+View(Grouppreandpostnamenew)
+
+clinicaldatashannonOTUdf<-cbind(Grouppreandpostnamenew,clinicaldatashannonOTUdf)
+View(clinicaldatashannonOTUdf)
+
+clinicaldatashannonOTUdf$Group4<-with(clinicaldatashannonOTUdf,interaction(Grouppreandpostnamenew,Groupshannondf))
+View(clinicaldatashannonOTUdf)
+
+clinicaldatashannonOTUdf$Group4<-factor(clinicaldatashannonOTUdf$Group4,levels=c("pre.1","pos.1","pre.2","pos.2"))
+```
+
+
+```{r}
+#AST
+#Graph
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=AST), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="AST variation through time, by Shannon Groups",
+       x ="Time:Group", y = "AST")
+
+#Statistical test
+df_Group4_AST<-clinicaldatashannonOTUdf[,c("Group4","AST")]
+View(df_Group4_AST)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_AST$AST,df_Group4_AST$Group4)
+#variances  the same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_AST$AST,df_Group4_AST$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=AST~Group4,data=df_Group4_AST)
+anova(fit)
+summary(aov(formula=AST~Group4,data=df_Group4_AST))
+aov_fit<-aov(AST~Group4,data=df_Group4_AST)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_AST$AST,df_Group4_AST$Group4, p.adjust="none", pool.sd = T)
+```
+
+
+```{r}
+#ALT
+#Graph
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=ALT), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="ALT variation through time, by Shannon Groups",
+       x ="Time:Group", y = "ALT")
+
+#Statistical test
+df_Group4_ALT<-clinicaldatashannonOTUdf[,c("Group4","ALT")]
+View(df_Group4_ALT)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_ALT$ALT,df_Group4_ALT$Group4)
+#variances  are not the same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_ALT$ALT,df_Group4_ALT$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=ALT~Group4,data=df_Group4_ALT)
+anova(fit)
+summary(aov(formula=ALT~Group4,data=df_Group4_ALT))
+aov_fit<-aov(ALT~Group4,data=df_Group4_ALT)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_ALT$ALT,df_Group4_ALT$Group4, p.adjust="none", pool.sd = T)
+```
+
+
+```{r}
+#Weight
+#Graph
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=ALT), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="Weight variation through time, by Shannon Groups",
+       x ="Time:Group", y = "Weight")
+
+#Statistical test
+df_Group4_Weight<-clinicaldatashannonOTUdf[,c("Group4","Weight")]
+View(df_Group4_Weight)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_Weight$Weight,df_Group4_Weight$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_Weight$Weight,df_Group4_Weight$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=Weight~Group4,data=df_Group4_Weight)
+anova(fit)
+summary(aov(formula=Weight~Group4,data=df_Group4_Weight))
+aov_fit<-aov(Weight~Group4,data=df_Group4_Weight)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_Weight$Weight,df_Group4_ALT$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#WAISTcmpre
+#Graph
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=WAISTcmpre), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="WAIST variation through time, by Shannon Groups",
+       x ="Time:Group", y = "WAIST")
+
+#Statistical test
+df_Group4_WAISTcmpre<-clinicaldatashannonOTUdf[,c("Group4","WAISTcmpre")]
+View(df_Group4_WAISTcmpre)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_WAISTcmpre$WAISTcmpre,df_Group4_WAISTcmpre$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_WAISTcmpre$WAISTcmpre,df_Group4_WAISTcmpre$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=WAISTcmpre~Group4,data=df_Group4_WAISTcmpre)
+anova(fit)
+summary(aov(formula=WAISTcmpre~Group4,data=df_Group4_WAISTcmpre))
+aov_fit<-aov(WAISTcmpre~Group4,data=df_Group4_WAISTcmpre)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_WAISTcmpre$WAISTcmpre,df_Group4_WAISTcmpre$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#HIPS
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=HIPScm), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="HIPS variation through time, by Shannon Groups",
+       x ="Time:Group", y = "HIPS")
+
+#Statistical test
+df_Group4_HIPS<-clinicaldatashannonOTUdf[,c("Group4","HIPScm")]
+View(df_Group4_HIPS)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_HIPS$HIPScm,df_Group4_HIPS$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_HIPS$HIPScm,df_Group4_HIPS$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=HIPScm~Group4,data=df_Group4_HIPS)
+anova(fit)
+summary(aov(formula=HIPScm~Group4,data=df_Group4_HIPS))
+aov_fit<-aov(HIPScm~Group4,data=df_Group4_HIPS)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_HIPS$HIPScm,df_Group4_ALT$Group4, p.adjust="none", pool.sd = T)
+```
+```{r}
+#Platelets
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=Platelets), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="Platelets variation through time, by Shannon Groups",
+       x ="Time:Group", y = "Platelets")
+
+#Statistical test
+df_Group4_Platelets<-clinicaldatashannonOTUdf[,c("Group4","Platelets")]
+View(df_Group4_Platelets)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_Platelets$Platelets,df_Group4_Platelets$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_Platelets$Platelets,df_Group4_Platelets$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=Platelets~Group4,data=df_Group4_Platelets)
+anova(fit)
+summary(aov(formula=Platelets~Group4,data=df_Group4_Platelets))
+aov_fit<-aov(Platelets~Group4,data=df_Group4_Platelets)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_Platelets$Platelets,df_Group4_Platelets$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#TCHOL
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=TCHOL), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="Total cholesterol variation through time, by Shannon Groups",
+       x ="Time:Group", y = "Total cholesterol")
+
+#Statistical test
+df_Group4_TCHOL<-clinicaldatashannonOTUdf[,c("Group4","TCHOL")]
+View(df_Group4_TCHOL)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_TCHOL$TCHOL,df_Group4_TCHOL$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_TCHOL$TCHOL,df_Group4_TCHOL$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=TCHOL~Group4,data=df_Group4_TCHOL)
+anova(fit)
+summary(aov(formula=TCHOL~Group4,data=df_Group4_TCHOL))
+aov_fit<-aov(TCHOL~Group4,data=df_Group4_TCHOL)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_TCHOL$TCHOL,df_Group4_TCHOL$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#TRIGS
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=TRIGS), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="Triglycerides variation through time, by Shannon Groups",
+       x ="Time:Group", y = "Triglycerides")
+
+#Statistical test
+df_Group4_TRIGS<-clinicaldatashannonOTUdf[,c("Group4","TRIGS")]
+View(df_Group4_TRIGS)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_TRIGS$TRIGS,df_Group4_TRIGS$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_TRIGS$TRIGS,df_Group4_TRIGS$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=TRIGS~Group4,data=df_Group4_TRIGS)
+anova(fit)
+summary(aov(formula=TRIGS~Group4,data=df_Group4_TRIGS))
+aov_fit<-aov(TRIGS~Group4,data=df_Group4_TRIGS)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_TRIGS$TRIGS,df_Group4_ALT$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#HDL
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=HDL), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="HDL variation through time, by Shannon Groups",
+       x ="Time:Group", y = "HDL")
+
+#Statistical test
+df_Group4_HDL<-clinicaldatashannonOTUdf[,c("Group4","HDL")]
+View(df_Group4_HDL)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_HDL$HDL,df_Group4_HDL$Group4)
+#variances  are not the  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_HDL$HDL,df_Group4_HDL$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=HDL~Group4,data=df_Group4_HDL)
+anova(fit)
+summary(aov(formula=HDL~Group4,data=df_Group4_HDL))
+aov_fit<-aov(HDL~Group4,data=df_Group4_HDL)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_HDL$HDL,df_Group4_HDL$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#Glucose
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=GLU), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="Glucose variation through time, by Shannon Groups",
+       x ="Time:Group", y = "Glucose")
+
+#Statistical test
+df_Group4_GLU<-clinicaldatashannonOTUdf[,c("Group4","GLU")]
+View(df_Group4_GLU)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_GLU$GLU,df_Group4_GLU$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_GLU$GLU,df_Group4_GLU$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=GLU~Group4,data=df_Group4_GLU)
+anova(fit)
+summary(aov(formula=GLU~Group4,data=df_Group4_GLU))
+aov_fit<-aov(GLU~Group4,data=df_Group4_GLU)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_GLU$GLU,df_Group4_GLU$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#Insulin
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=INSULIN), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="Insulin variation through time, by Shannon Groups",
+       x ="Time:Group", y = "Insulin")
+
+#Statistical test
+df_Group4_INSULIN<-clinicaldatashannonOTUdf[,c("Group4","INSULIN")]
+View(df_Group4_INSULIN)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_INSULIN$INSULIN,df_Group4_INSULIN$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_INSULIN$INSULIN,df_Group4_INSULIN$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=INSULIN~Group4,data=df_Group4_INSULIN)
+anova(fit)
+summary(aov(formula=INSULIN~Group4,data=df_Group4_INSULIN))
+aov_fit<-aov(INSULIN~Group4,data=df_Group4_INSULIN)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_INSULIN$INSULIN,df_Group4_INSULIN$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#HLeptin
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=hLeptin), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="Leptin variation through time, by Shannon Groups",
+       x ="Time:Group", y = "Leptin")
+
+#Statistical test
+df_Group4_hLeptin<-clinicaldatashannonOTUdf[,c("Group4","hLeptin")]
+View(df_Group4_hLeptin)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_hLeptin$hLeptin,df_Group4_hLeptin$Group4)
+#variances  are  not the same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_hLeptin$hLeptin,df_Group4_hLeptin$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=hLeptin~Group4,data=df_Group4_hLeptin)
+anova(fit)
+summary(aov(formula=hLeptin~Group4,data=df_Group4_hLeptin))
+aov_fit<-aov(hLeptin~Group4,data=df_Group4_hLeptin)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_hLeptin$hLeptin,df_Group4_hLeptin$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#HCRP30
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=hACRP30), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="ACRP30 variation through time, by Shannon Groups",
+       x ="Time:Group", y = "ACRP30")
+
+#Statistical test
+df_Group4_hACRP30<-clinicaldatashannonOTUdf[,c("Group4","hACRP30")]
+View(df_Group4_hACRP30)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_hACRP30$hACRP30,df_Group4_hACRP30$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_hACRP30$hACRP30,df_Group4_hACRP30$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=hACRP30~Group4,data=df_Group4_hACRP30)
+anova(fit)
+summary(aov(formula=hACRP30~Group4,data=df_Group4_hACRP30))
+aov_fit<-aov(hACRP30~Group4,data=df_Group4_hACRP30)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_hACRP30$hACRP30,df_Group4_hACRP30$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#BMI
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=BMI), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="BMI variation through time, by Shannon Groups",
+       x ="Time:Group", y = "BMI")
+
+#Statistical test
+df_Group4_BMI<-clinicaldatashannonOTUdf[,c("Group4","BMI")]
+View(df_Group4_BMI)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_BMI$BMI,df_Group4_BMI$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_BMI$BMI,df_Group4_BMI$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=BMI~Group4,data=df_Group4_BMI)
+anova(fit)
+summary(aov(formula=BMI~Group4,data=df_Group4_BMI))
+aov_fit<-aov(BMI~Group4,data=df_Group4_BMI)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_BMI$BMI,df_Group4_BMI$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#HOMA
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=HOMA), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="HOMA variation through time, by Shannon Groups",
+       x ="Time:Group", y = "HOMA")
+
+#Statistical test
+df_Group4_HOMA<-clinicaldatashannonOTUdf[,c("Group4","HOMA")]
+View(df_Group4_HOMA)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_HOMA$HOMA,df_Group4_HOMA$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_HOMA$HOMA,df_Group4_HOMA$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=HOMA~Group4,data=df_Group4_HOMA)
+anova(fit)
+summary(aov(formula=HOMA~Group4,data=df_Group4_HOMA))
+aov_fit<-aov(HOMA~Group4,data=df_Group4_HOMA)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_HOMA$HOMA,df_Group4_HOMA$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#HIL10
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=hIL10), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="IL10 variation through time, by Shannon Groups",
+       x ="Time:Group", y = "hIL10")
+
+#Statistical test
+df_Group4_hIL10<-clinicaldatashannonOTUdf[,c("Group4","hIL10")]
+View(df_Group4_hIL10)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_hIL10$hIL10,df_Group4_hIL10$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_hIL10$hIL10,df_Group4_hIL10$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=hIL10~Group4,data=df_Group4_hIL10)
+anova(fit)
+summary(aov(formula=hIL10~Group4,data=df_Group4_hIL10))
+aov_fit<-aov(hIL10~Group4,data=df_Group4_hIL10)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_hIL10$hIL10,df_Group4_hIL10$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#hIL18p
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=hIL18p), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="IL18p variation through time, by Shannon Groups",
+       x ="Time:Group", y = "IL18p")
+
+#Statistical test
+df_Group4_hIL18p<-clinicaldatashannonOTUdf[,c("Group4","hIL18p")]
+View(df_Group4_hIL18p)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_hIL18p$hIL18p,df_Group4_hIL18p$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_hIL18p$hIL18p,df_Group4_hIL18p$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=hIL18p~Group4,data=df_Group4_hIL18p)
+anova(fit)
+summary(aov(formula=hIL18p~Group4,data=df_Group4_hIL18p))
+aov_fit<-aov(hIL18p~Group4,data=df_Group4_hIL18p)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_hIL18p$hIL18p,df_Group4_hIL18p$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#HIL1B
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=hIL1b), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="IL1b variation through time, by Shannon Groups",
+       x ="Time:Group", y = "IL1b")
+
+#Statistical test
+df_Group4_hIL1b<-clinicaldatashannonOTUdf[,c("Group4","hIL1b")]
+View(df_Group4_hIL1b)
+
+#13 /30 values missing
+```
+
+
+
+```{r}
+#hIL6
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=hIL6), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="hIL6 variation through time, by Shannon Groups",
+       x ="Time:Group", y = "hIL6")
+
+#Statistical test
+df_Group4_hIL6<-clinicaldatashannonOTUdf[,c("Group4","hIL6")]
+View(df_Group4_hIL6)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_hIL6$hIL6,df_Group4_hIL6$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_hIL6$hIL6,df_Group4_hIL6$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=hIL6~Group4,data=df_Group4_hIL6)
+anova(fit)
+summary(aov(formula=hIL6~Group4,data=df_Group4_hIL6))
+aov_fit<-aov(hIL6~Group4,data=df_Group4_hIL6)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_hIL6$hIL6,df_Group4_hIL6$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#hTNFa
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=hTNFa), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="HIPS variation through time, by Shannon Groups",
+       x ="Time:Group", y = "hTNFa")
+
+#Statistical test
+df_Group4_hTNFa<-clinicaldatashannonOTUdf[,c("Group4","hTNFa")]
+View(df_Group4_hTNFa)
+
+#9/30 values missing
+```
+
+```{r}
+#HResistin
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=hResistin), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="Resistin variation through time, by Shannon Groups",
+       x ="Time:Group", y = "Resistin")
+
+#Statistical test
+df_Group4_hResistin<-clinicaldatashannonOTUdf[,c("Group4","hResistin")]
+View(df_Group4_hResistin)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_hResistin$hResistin,df_Group4_hResistin$Group4)
+#variances  are  same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_hResistin$hResistin,df_Group4_hResistin$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=hResistin~Group4,data=df_Group4_hResistin)
+anova(fit)
+summary(aov(formula=hResistin~Group4,data=df_Group4_hResistin))
+aov_fit<-aov(hResistin~Group4,data=df_Group4_hResistin)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_hResistin$hResistin,df_Group4_hResistin$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+#hCD14
+#Graph
+View(clinicaldatashannonOTUdf)
+p<-ggplot(clinicaldatashannonOTUdf,aes(x=Group4,y=hCD14), col=factor(Group4))+geom_boxplot(notch=FALSE)
+p+labs(title="CD14 variation through time, by Shannon Groups",
+       x ="Time:Group", y = "hCD14")
+
+#Statistical test
+df_Group4_hCD14<-clinicaldatashannonOTUdf[,c("Group4","hCD14")]
+View(df_Group4_hCD14)
+
+#Bartlett test of homogeneity of variances
+bartlett.test(df_Group4_hCD14$hCD14,df_Group4_hCD14$Group4)
+#variances  are  not same
+
+#fligner - homoscedasticity
+fligner.test(df_Group4_hCD14$hCD14,df_Group4_hCD14$Group4)
+
+# reject the hypothesis - homocedasticity is the same
+
+# so we can perform ANOVA
+fit=lm(formula=hCD14~Group4,data=df_Group4_hCD14)
+anova(fit)
+summary(aov(formula=hCD14~Group4,data=df_Group4_hCD14))
+aov_fit<-aov(hCD14~Group4,data=df_Group4_hCD14)
+summary(aov_fit,intercept=T)
+library(broom)
+tidy(aov_fit)
+augment(aov_fit)
+glance(aov_fit)
+
+
+#pairwise test of mean differences
+pairwise.t.test(df_Group4_hCD14$hCD14,df_Group4_hCD14$Group4, p.adjust="none", pool.sd = T)
+```
+
+```{r}
+library(readxl)
+clinicaldata <- read_excel("~/Desktop/project2/clinicaldata.xlsx", sheet = "Clincalprefactors")
+View(clinicaldata)  
+clinicaldatapre<-clinicaldata[-12,]
+View(clinicaldatapre)
+
+shannongroup<-data.frame(c(1,1,2,2,1,2,1,2,1,1,1,2,2,1))
+colnames(shannongroup)<-"shannongroup"
+View(shannongroup)
+
+clinicaldatapreshannon<-cbind(clinicaldatapre,shannongroup)
+View(clinicaldatapreshannon)
+colnames(clinicaldatapreshannon)
+
+clinicaldatapreshannon1<-clinicaldatapreshannon[c(1,2,5,7,9,10,11,14),]
+clinicaldatapreshannon2<-clinicaldatapreshannon[c(3,4,6,8,12,13),]
+View(clinicaldatapreshannon1)
+
+shapiro.test(clinicaldatapreshannon$AGE)
+fit_t<-t.test( AGE~shannongroup, data=clinicaldatapreshannon)
+fit_t
+
+shapiro.test(clinicaldatapreshannon$Albuminpre)
+
+median(clinicaldatapreshannon1$Albuminpre)
+median(clinicaldatapreshannon2$Albuminpre)
+fit_w<-wilcox.test( Albuminpre~shannongroup, data=clinicaldatapreshannon)
+fit_w
+
+shapiro.test(clinicaldatapreshannon$GGTpre)
+median(clinicaldatapreshannon1$GGTpre)
+median(clinicaldatapreshannon2$GGTpre)
+fit_w<-wilcox.test( GGTpre~shannongroup, data=clinicaldatapreshannon)
+fit_w
+
+shapiro.test(clinicaldatapreshannon$Hbpre)
+median(clinicaldatapreshannon1$Hbpre)
+median(clinicaldatapreshannon2$Hbpre)
+fit_w<-wilcox.test( Hbpre~shannongroup, data=clinicaldatapreshannon)
+fit_w
+
+shapiro.test(clinicaldatapreshannon$WCCpre)
+median(clinicaldatapreshannon1$WCCpre)
+median(clinicaldatapreshannon2$WCCpre)
+fit_w<-wilcox.test( WCCpre~shannongroup, data=clinicaldatapreshannon)
+fit_w
+
+shapiro.test(clinicaldatapreshannon$Neutrophilspre)
+median(clinicaldatapreshannon1$Neutrophilspre)
+median(clinicaldatapreshannon2$Neutrophilspre)
+fit_w<-wilcox.test( Neutrophilspre~shannongroup, data=clinicaldatapreshannon)
+fit_w
+
+shapiro.test(clinicaldatapreshannon$HEIGHT)
+median(clinicaldatapreshannon1$HEIGHT)
+median(clinicaldatapreshannon2$HEIGHT)
+fit_w<-wilcox.test( HEIGHT~shannongroup, data=clinicaldatapreshannon)
+fit_w
+
+library(MASS)
+tbl=table(clinicaldatapreshannon$shannongroup,clinicaldatapreshannon$DM)
+tbl
+chisq.test(tbl)
+fisher.test(tbl)
+
+
+tbl=table(clinicaldatapreshannon$shannongroup,clinicaldatapreshannon$Hypertension)
+tbl
+chisq.test(tbl)
+fisher.test(tbl)
+
+tbl=table(clinicaldatapreshannon$shannongroup,clinicaldatapreshannon$ObesityBMI)
+tbl
+chisq.test(tbl)
+fisher.test(tbl)
+
+tbl=table(clinicaldatapreshannon$shannongroup,clinicaldatapreshannon$Dyslidaemia)
+tbl
+chisq.test(tbl)
+fisher.test(tbl)
+
+tbl=table(clinicaldatapreshannon$shannongroup,clinicaldatapreshannon$IDFmetsyn)
+tbl
+chisq.test(tbl)
+fisher.test(tbl)
+
+tbl=table(clinicaldatapreshannon$shannongroup,clinicaldatapreshannon$Metformin)
+tbl
+chisq.test(tbl)
+fisher.test(tbl)
+
+tbl=table(clinicaldatapreshannon$shannongroup,clinicaldatapreshannon$Sulphonylure)
+tbl
+chisq.test(tbl)
+fisher.test(tbl)
+
+tbl=table(clinicaldatapreshannon$shannongroup,clinicaldatapreshannon$Statin)
+tbl
+chisq.test(tbl)
+fisher.test(tbl)
+```
+
+#MetabolomicXshannon groups
+```{r}
+rita_data <- read_excel("~/Desktop/project2/rita_data.xlsx", sheet = "NMR_data")
+View(rita_data)                                              
+nmr_rita<-rita_data[,c("AA09_1", "AA09_2","JF13_1", "JF13_2", "JH02_1", "JH02_2", "JS04_1", "JS04_2",
+                     "KH10_1", "KH10_2", "KO03_1", "KO03_2", "MM16_1","MM16_2", "MO07_1", "MO07_2",
+                     "NA05_1", "NA05_2", "NB12_1", "NB12_2", "NR14_1", "NR14_2", "PF11_1", "PF11_2",
+                      "PR08_1", "PR08_2", "QA06_1","QA06_2", "VZ01_1", "VZ01_2")]
+View(nmr_rita)
+colnames(nmr_rita)<-c("AA09_pre", "AA09_post","JF13_pre", "JF13_post","JH02_pre","JH02_post",
+                      "JS04_pre","JS04_post", "KH10_pre","KH10_post","KO03_pre",
+                      "KO03_post","MM16_pre", "MM16_post","MO07_pre","MO07_post",
+                      "NA05_pre", "NA05_post","NB12_pre", "NB12_post","NR14_pre","NR14_post",
+                      "PF11_pre", "PF11_post","PR08_pre", "PR08_post",  "QA06_pre"," QA06_post"
+                  ,"VZ01_pre","VZ01_post")
+View(nmr_rita)
+row.names(nmr_ritatable)
+#Y.spec
+nmr_ritatable<-t(nmr_rita)
+View(nmr_ritatable)
+spectra<-as.matrix(nmr_ritatable)
+spectra
+View(spectra)
+
+#X.ppm
+View(spectra)
+ppmf<-rita_data[,c("ppm")]
+View(ppmf)
+ppmts<-t(ppmf)
+View(ppmts)
+ppm <- as.numeric(ppmts)
+
+#sample.labels
+View(nmr_ritatable)
+samplelabels<-row.names(nmr_ritatable)
+samplelabelsgraph<-as.factor(samplelabels)
+View(samplelabelsgraph)
+View(subject)
+subjectgraph<-as.factor(subject)
+
+  
+# By shannon diversity
+
+View(spectra)
+
+spectra.group1<-spectra[c("MM16_pre","MM16_post", "VZ01_pre","VZ01_post",
+                        "NA05_pre","NA05_post","NR14_pre","NR14_post",
+                        "PF11_pre","PF11_post","PR08_pre","PR08_post","AA09_pre","AA09_post"),]
+
+spectra.group1pre<-spectra[c("MM16_pre","VZ01_pre",
+            "NA05_pre","NR14_pre",
+            "PF11_pre","PR08_pre","AA09_pre"),]
+
+spectra.group1pos<-spectra[c("MM16_post","VZ01_post",
+                            "NA05_post","NR14_post",
+                            "PF11_post","PR08_post"
+                            ),]
+
+row.names(spectra)
+spectra.group2<-spectra[c("JF13_pre","JF13_post","JH02_pre", "JH02_post" ,"KH10_pre", "KH10_post",
+                          "KO03_pre","KO03_post","MO07_pre","MO07_post","NB12_pre","NB12_post","QA06_pre"," QA06_post"),]
+
+spectra.group2pre<-spectra[c("JF13_pre","JH02_pre","KH10_pre",
+                            "KO03_pre","MO07_pre","NB12_pre","QA06_pre"),]
+
+spectra.group2pos<-spectra[c("JF13_post", "JH02_post", "KH10_post",
+                            "KO03_post","MO07_post","NB12_post"," QA06_post"),]
+
+
+samplelabelsgroup1pre<-row.names(spectra.group1pre)
+
+AddPlottingStuff(test.peaks, X.ppm = ppm)
+
+getWaveletPeaks(spectra.group1, ppm)
+getWaveletPeaks(
+  Y.spec,
+  X.ppm,
+  sample.labels = NULL,
+  window.width = "small",
+  window.split = 4,
+  scales = seq(1, 16, 1),
+  baselineThresh = 1000,
+  SNR)
+
+speaq::drawSpecPPM(Y.spec = spectra.group1pre, 
+                   X.ppm = ppm, 
+                   title = 'Metabolic spectragroup1pre', 
+                   groupFactor =samplelabelsgroup1pre, 
+                   legend.extra.x = 1, 
+                   legend.extra.y = 1.1,
+                   ROI.ppm = 3.0, 
+                   ROI = NULL, 
+                   roiWidth.ppm = 1.00,
+                   legendpos = "topright")
+
+speaq::drawSpecPPM(Y.spec = spectra.group1pre, 
+                   X.ppm = ppm, 
+                   title = 'Metabolic spectragroup1pre', 
+                   groupFactor =samplelabelsgroup1pre, 
+                   legend.extra.x = 1, 
+                   legend.extra.y = 1.1,
+                   ROI.ppm = 7.5, 
+                   ROI = NULL, 
+                   roiWidth.ppm = 1.00,
+                   legendpos = "topright")
+
+
+speaq::drawSpecPPM(Y.spec = spectra.group1pre, 
+                   X.ppm = ppm, 
+                   title = 'Metabolic spectragroup1pre', 
+                   groupFactor =samplelabelsgroup1pre, 
+                   legend.extra.x = 1, 
+                   legend.extra.y = 1.1)
+
+samplelabelgroup1pos<-row.names(spectra.group1pos)
+speaq::drawSpecPPM(Y.spec = spectra.group1pos, 
+                   X.ppm = ppm, 
+                   title = 'Metabolic spectragroup1pos', 
+                   groupFactor =samplelabelgroup1pos, 
+                   legend.extra.x = 1, 
+                   legend.extra.y = 1.1)
+
+speaq::drawSpecPPM(Y.spec = spectra.group1pos, 
+                   X.ppm = ppm, 
+                   title = 'Metabolic spectragroup1pos', 
+                   groupFactor =samplelabelgroup1pos, 
+                   legend.extra.x = 1, 
+                   legend.extra.y = 1.1,
+                   ROI.ppm = 3.0, 
+                   ROI = NULL, 
+                   roiWidth.ppm = 1.00,
+                   legendpos = "topright")
+
+speaq::drawSpecPPM(Y.spec = spectra.group1pos, 
+                   X.ppm = ppm, 
+                   title = 'Metabolic spectragroup1pos', 
+                   groupFactor =samplelabelgroup1pos, 
+                   legend.extra.x = 1, 
+                   legend.extra.y = 1.1,
+                   ROI.ppm = 7.5, 
+                   ROI = NULL, 
+                   roiWidth.ppm = 1.00,
+                   legendpos = "topright")
+
+samplelabelgroup2pre<-row.names(spectra.group2pre)
+
+speaq::drawSpecPPM(Y.spec = spectra.group2pre, 
+                   X.ppm = ppm, 
+                   title = 'Metabolic spectragroup2pre', 
+                   groupFactor =samplelabelgroup2pre, 
+                   legend.extra.x = 1, 
+                   legend.extra.y = 1.1
+                   )
+
+speaq::drawSpecPPM(Y.spec = spectra.group2pre, 
+                   X.ppm = ppm, 
+                   title = 'Metabolic spectragroup2pre', 
+                   groupFactor =samplelabelgroup2pre, 
+                   legend.extra.x = 1, 
+                   legend.extra.y = 1.1,
+                   ROI.ppm = 7.6, 
+                   ROI = NULL, 
+                   roiWidth.ppm = 1.1,
+                   legendpos = "topright")
+
+speaq::drawSpecPPM(Y.spec = spectra.group2pre, 
+                   X.ppm = ppm, 
+                   title = 'Metabolic spectragroup2pre', 
+                   groupFactor =samplelabelgroup2pre, 
+                   legend.extra.x = 1, 
+                   legend.extra.y = 1.1,
+                   ROI.ppm = 3.5, 
+                   ROI = NULL,
+                   roiWidth.ppm = 1.00
+                    )
+samplelabelgroup2pos<-row.names(spectra.group2pos)
+speaq::drawSpecPPM(Y.spec = spectra.group2pos, 
+                   X.ppm = ppm, 
+                   title = 'Metabolic spectragroup2pos', 
+                   groupFactor =samplelabelgroup2pos, 
+                   legend.extra.x = 1, 
+                   legend.extra.y = 1.1)
+
+speaq::drawSpecPPM(Y.spec = spectra.group2pos, 
+                   X.ppm = ppm, 
+                   title = 'Metabolic spectragroup2pos', 
+                   groupFactor =samplelabelgroup2pos, 
+                   legend.extra.x = 1, 
+                   legend.extra.y = 1.1,
+                   ROI.ppm = 3.5, 
+                   ROI = NULL, 
+                   roiWidth.ppm = 1.00
+                   )
+
+
+speaq::drawSpecPPM(Y.spec = spectra.group2pos, 
+                   X.ppm = ppm, 
+                   title = 'Metabolic spectragroup2pos', 
+                   groupFactor =samplelabelgroup2pos, 
+                   legend.extra.x = 1, 
+                   legend.extra.y = 1.1,
+                   ROI.ppm = 7.5, 
+                   ROI = NULL, 
+                   roiWidth.ppm = 1.00,
+                   legendpos = "topright" )
+
+View(spectra)
+test.peaks<-getWaveletPeaks(
+  Y.spec=spectra,
+  X.ppm=ppmts,
+  sample.labels = samplelabels,
+  window.width = "small",
+  window.split = 4,
+  scales = seq(1, 16, 1),
+  baselineThresh = 10,
+  SNR.Th = -1,
+  nCPU = -1,
+  include_nearbyPeaks = TRUE,
+  raw_peakheight = FALSE,
+  duplicate_detection_multiplier = 1
+)
+
+test.grouped <- PeakGrouper(Y.peaks = test.peaks)
+test.Features <- BuildFeatureMatrix(test.grouped)
+
+Groupshanoondiv<-c(1,1,2,2,2,2,2,2,2,2,1,1,2,2,1,1,2,2,1,1,1,1,1,1,2,2,1,1)
+View(Groupshanoondiv)
+speaq::ROIplot(Y.spec = spectra, 
+               X.ppm = ppm, 
+               ungrouped.peaks = test.peaks,
+               grouped.peaks = test.grouped, 
+               ROI.ppm=4,
+               roiWidth.ppm =4,
+               groupLabels =Groupshanoondiv)
+
+speaq::ROIplot(Y.spec = spectra, 
+               X.ppm = ppm, 
+               ungrouped.peaks = test.peaks,
+               grouped.peaks = test.grouped, 
+               ROI.ppm = 3,
+               roiWidth.ppm = 1.5, 
+               groupLabels =Groupshanoondiv)
+
+
+SilhouetteValues <- speaq::SilhouetR(DataMatrix = test.grouped$peakPPM, 
+                                     GroupIndices = test.grouped$peakIndex)
+SilhouetteValues
+
+## DataMatrix is not a matrix, attempting conversion with the assumption of only 1 variable (1 column)
+Silh_plot <- ggplot(SilhouetteValues, aes(SilhouetteValues)) +
+  geom_freqpoly(binwidth = 0.03) +
+  theme_bw()
+Silh_plot
+
+groups <- unique(SilhouetteValues$GroupIndices)
+Ngroups <- length(groups)
+sil_means <- matrix(NA, ncol = 3, nrow = Ngroups)
+
+for (k in 1:Ngroups) {
+  sil_means[k, 1] = groups[k]
+  sil_means[k, 2] = mean(SilhouetteValues$SilhouetteValues[SilhouetteValues$GroupIndices == 
+                                                             groups[k]])
+  sil_means[k, 3] = mean(wine.grouped$peakSNR[wine.grouped$peakIndex == groups[k]])
+}
+
+sil_means <- sil_means[order(sil_means[, 2]), ]
+colnames(sil_means) <- c("groupIndex", "avg_silhouette_val", "avg. SNR")
+head(sil_means)
+sil_means
+
+spectra.filled <- speaq::PeakFilling(Y.grouped = test.grouped, 
+                                  Y.spec = spectra,  
+                                  max.index.shift = 50,
+                                  nCPU = 1) # nCPU set to 1 for the vignette build
+
+spectra.Features <- speaq::BuildFeatureMatrix(spectra.filled)
+spectra.Features
+
+
+spectra.Features.scaled <- speaq::SCANT(data.matrix = test.Features, 
+                                     type = c("pareto", "center"))  
+common.pca <- prcomp(spectra.Features.scaled) 
+ 
+print(common.pca)
+
+loadings <- common.pca$rotation
+scores <- common.pca$x
+varExplained <- common.pca$sdev^2
+
+barplot(varExplained/sum(varExplained), 
+        main="Scree Plot",ylab="Proportion of variance explained", 
+        xlab = "Principal component", 
+        names.arg = as.character(seq(1,length(varExplained))))
+
+plot.marks <- as.numeric(Groupshanoondiv)
+plot.marks[plot.marks == 1] <- 8 
+plot.marks[plot.marks == 2] <- 1
+
+
+cp1 <- 1
+cp2 <- 2 
+plot(scores[,cp1]/max(scores[,cp1]), scores[,cp2]/max(scores[,cp2]),
+     main=paste("score plot, PC",cp1," vs. PC",cp2,sep=""),
+     xlab=paste("PC",cp1,round(varExplained[cp1]/sum(varExplained),digits=2),""),
+     ylab=paste("PC",cp2,round(varExplained[cp2]/sum(varExplained),digits=2),""),
+     pch = plot.marks)
+text(scores[,cp1]/max(scores[,cp1]),scores[,cp2]/max(scores[,cp2]),samplelabels, cex=1, pos=4, col=c("blue"))
+lines(x = c(-100,100), y = c(0,0))
+lines(x = c(0,0), y = c(-100,100))
+legend("bottomright",
+      legend = c("shannon1","shannon2"), 
+      pch = c(8,1), 
+      y.intersp = 0.5)
+
+
+
+Groupshanoondivf<- as.factor(Groupshanoondiv)
+p.all_bonfGroupshanoondiv <- speaq::relevant.features.p(datamatrix = spectra.Features.scaled,
+                                                        response =Groupshanoondivf , 
+                                                        p.adj = "bonferroni")
+
+p.all_FDRGroupshanoondiv <- speaq::relevant.features.p(datamatrix = spectra.Features.scaled,
+                                                       response =Groupshanoondivf , 
+                                                       p.adj = "fdr")
+
+p.all_BHGroupshanoondiv <- speaq::relevant.features.p(datamatrix = spectra.Features.scaled,
+                                                      response =Groupshanoondivf , 
+                                                      p.adj = "BH")
+p.all_noadjGroupshanoondiv <- speaq::relevant.features.p(datamatrix = spectra.Features.scaled,
+                                                         response =Groupshanoondivf , 
+                                                         p.adj = "none")
+
+print(p.all_noadjGroupshanoondiv)
+
+significant.features <- p.all_noadjGroupshanoondiv[p.all_noadjGroupshanoondiv$p.values<=0.05, ]
+
+# order from most significant
+significant.features <- significant.features[order(significant.features[,2]),]
+head(significant.features)
+
+  
+interest.groupIndex <- significant.features$index
+interest.groupIndex <- significant.features$index
+interest.peakIndex <- as.numeric(rownames(significant.features))
+interest.groupIndex
+
+ROI.ppm <- ppm[interest.groupIndex]
+roiWidth.ppm <- 0.03
+
+
+ggplot(p.all_noadjGroupshanoondiv, aes(x=as.numeric(rownames(p.all_noadjGroupshanoondiv)), y= -log10(p.values) )) + 
+  geom_point(data = p.all_noadjGroupshanoondiv[-interest.peakIndex,],  
+             aes(x=as.numeric(rownames(p.all_noadjGroupshanoondiv[-interest.peakIndex,])), y= -log10(p.values) ),
+             shape = 16) +
+  geom_point(data = p.all_noadjGroupshanoondiv[interest.peakIndex,],  aes(x=interest.peakIndex, y= -log10(p.values) ),
+             shape = 18, 
+             size = 3, 
+             colour ="#00B0F6" ) +
+  xlab("feature index") + 
+  ylab("- log10 p-value") + 
+  ggtitle("non adjusted  p-values") +
+  geom_hline(aes(yintercept= -log10(0.05), color="red"),linetype = 2) + 
+  guides(color=FALSE) +
+  theme_bw() + 
+  theme(plot.title = element_text(lineheight = 0.8, face="bold", margin = margin(12,0,13,0),hjust = 0.5, size = 15), 
+        text = element_text(size=14))
+
+
+drawSpecPPM(Y.spec = spectra,
+            X.ppm = ppm, 
+            groupFactor = Groupshanoondiv, 
+            title = paste("significant feature, p-value ",
+                          format(significant.features$p.values, 
+                                 scientific = TRUE, 
+                                 digits=2),
+                          sep=" "), 
+            legend.extra.x = 1.1, 
+            legend.extra.y = 0.9, 
+            ROI = significant.features$index, 
+            roiWidth = 100, 
+            legendpos = "topright" )
+
+
+peakList <- speaq::detectSpecPeaks(as.matrix(spectra),   
+                                   nDivRange = 128,   
+                                   scales = seq(1, 16, 2),
+                                   baselineThresh = 100,
+                                   SNR.Th = -1,
+                                   verbose=FALSE)
+
+resFindRef <- findRef(peakList)
+refInd <- resFindRef$refInd
+
+aligned.spectra <- speaq::dohCluster(as.matrix(spectra), 
+                                     peakList = peakList,
+                                     refInd = refInd,
+                                     maxShift  = 200,
+                                     acceptLostPeak = TRUE, verbose=FALSE)
+aligned.spectra
+
+speaq::drawSpecPPM(Y.spec = aligned.spectra, 
+                   X.ppm = ppm, 
+                   groupFactor =Groupshanoondiv , 
+                   title = paste("significant feature, p-value =",
+                                 format(significant.features$p.values, 
+                                        scientific = TRUE, 
+                                        digits=2),
+                                 sep=" "), 
+                   legend.extra.x = 1.1, 
+                   legend.extra.y = 0.9,
+                   ROI = significant.features$index, 
+                   roiWidth = 100, 
+                   legendpos = "topright" )          
+```
+cp1 <- 1
+cp2 <- 2 
+plot(scores[,cp1]/max(scores[,cp1]), scores[,cp2]/max(scores[,cp2]),
+     main=paste("score plot, PC",cp1," vs. PC",cp2,sep=""),
+     xlab=paste("PC",cp1,round(varExplained[cp1]/sum(varExplained),digits=2),""),
+     ylab=paste("PC",cp2,round(varExplained[cp2]/sum(varExplained),digits=2),""),
+     pch = plot.marks)
+text(scores[,cp1]/max(scores[,cp1]),scores[,cp2]/max(scores[,cp2]),samplelabels, cex=0.75, pos=3, col=c("blue"))
+lines(x = c(-100,100), y = c(0,0))
+lines(x = c(0,0), y = c(-100,100))
+legend("bottomright",
+      legend = c("shannon1","shannon2"), 
+      pch = c(8,1), 
+      y.intersp = 0.5)
+
+```{r}
+#PCA with multiple regression
+View(clinicaldataprepos)
+
+clinicaldatapreposdf<-data.frame(clinicaldata)
+View(clinicaldatapreposdf)
+clinicaldatapreposdfinal<-clinicaldatapreposdf[-c(31,32),]
+View(clinicaldatapreposdfinal)
+row.names(clinicaldatapreposdfinal)<-clinicaldatapreposdfinal[,c(1)]
+View(clinicaldatapreposdfinal)
+clinicaldatapreposfinalfinal<-clinicaldatapreposdfinal[,-c(1)]
+View(clinicaldatapreposfinalfinal)
+
+metadata<-clinicaldatapreposfinalfinal[c("AA09_post_1", "JS_04_pos", "NB12_post_1" ,"KO03_post_1", "JH02_post_1", "QA06_post_1","PR08_post_1",
+"NR14_post_1", "NA05_post_1" ,"KH10_post_1", "VZ01_post_1", "JF13_post_1", "PF11_post_1" ,"MO07_post_1",
+ "MM16_post_1", "AA9_pre_2" , "JS_04_pre" , "NB12_pre_1" , "KO03_pre_2" , "JH02_pre_2" , "QA06_pre_2" ,
+ "PR08_pre_2" , "NR14_pre_1" , "NA05_pre" ,  "KH10_pre"  ,  "VZ01_pre_2" , "JF13_pre_2" , "PF11_pre_1" ,
+ "MO07_pre"  ,  "MM16_pre" ),]
+View(metadata)
+abund_hell<-decostand(preandposttablesum,"hell")
+View(abund_hell)
+row.names(abund_hell)
+row.names(metadata)
+row.names(abund_hell)<-c("AA09_post", "JS04_post" ,"NB12_post", "KO03_post" ,"JH02_post", "QA06_post", "PR08_post", "NR14_post", "NA05_post", "KH10_post", "VZ01_post" ,"JF13_post", "PF11_post" ,"MO07_post",
+ "MM16_post", "AA09_pre" , "JS04_pre" , "NB12_pre" , "KO03_pre",  "JH02_pre",  "QA06_pre", 
+ "PR08_pre"  ,"NR14_pre" , "NA05_pre"  ,  "KH10_pre" ,   "VZ01_pre" , "JF13_pre",  "PF11_pre" ,
+ "MO07_pre"  ,  "MM16_pre")
+row.names(metadata)<-c("AA09_post", "JS04_post" ,"NB12_post", "KO03_post" ,"JH02_post", "QA06_post", "PR08_post_1", "NR14_post", "NA05_post", "KH10_post", "VZ01_post" ,"JF13_post", "PF11_post" ,"MO07_post",
+ "MM16_post", "AA09_pre" , "JS04_pre" , "NB12_pre" , "KO03_pre",  "JH02_pre",  "QA06_pre", 
+ "PR08_pre"  ,"NR14_pre" , "NA05_pre"  ,  "KH10_pre" ,   "VZ01_pre" , "JF13_pre",  "PF11_pre" ,
+ "MO07_pre"  ,  "MM16_pre")
+colnames(metadata)
+
+
+
+rda_hell<-rda(abund_hell~Weight,metadata)
+summary(rda_hell)
+
+#rda_hell<-rda(abund_hell~Waistcmpre,metadata)
+summary(rda_hell)
+#rda_hell<-rda(abund_hell~hTNFa,metadata)
+summary(rda_hell)
+#rda_hell<-rda(abund_hell~HIPScm,metadata)
+summary(rda_hell)
+#rda_hell<-rda(abund_hell~hIL1b,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~ALT,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~AST,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~Platelets,metadata)
+summary(rda_hell)
+
+
+rda_hell<-rda(abund_hell~TCHOL,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~TRIGS,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~HDL,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~GLU,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~INSULIN,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~hIL10,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~hIL18p,metadata)
+summary(rda_hell)
+
+
+
+rda_hell<-rda(abund_hell~hIL6,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~hLeptin,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~hResistin,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~hACRP30,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~hCD14,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~BMI,metadata)
+summary(rda_hell)
+
+rda_hell<-rda(abund_hell~HOMA,metadata)
+summary(rda_hell)
+
+metadata<-metadata[,-c(2,3,14,17)]
+colnames(metadata)
+
+rda_hell<-rda(abund_hell~.,metadata)
+summary(rda_hell)
+
+RsquareAdj(rda_hell)$r.squared
+
+RsquareAdj(rda_hell)$adj.r.squared
+
+anova(rda_hell,step=1000)
+anova(rda_hell,by="axis",step=1000)
+anova(rda_hell,by="terms",step=1000)
+
+step_forward<-ordistep(rda(abund_hell~1,data=metadata),
+  scope=formula(rda_hell),direction="forward",pstep=1000)
+
+step_forward<-ordiR2step(rda(abund_hell~1,data=metadata),
+  scope=formula(rda_hell),direction="forward",pstep=1000)
+
+
+rda_1<-rda(abund_hell ~ hIL18p + INSULIN + hIL6 + hIL10 + hACRP30 + hCD14+AST,data=metadata) 
+anova(rda_1,step=1000)
+anova(rda_1,by="terms",step=1000)
+anova(rda_1,by="axis",step=1000)
+rda_2<-rda(abund_hell ~ hIL18p + INSULIN + hIL6 + hIL10 + hACRP30 + Weight,data=metadata) 
+anova(rda_2,step=1000)
+anova(rda_2,by="terms",step=1000)
+anova(rda_2,by="axis",step=1000)
+rda_3<-rda(abund_hell ~ hIL18p + INSULIN + hIL6 + hIL10 + hACRP30 + Weight+ hCD14 +AST,data=metadata) 
+anova(rda_3,step=1000)
+anova(rda_3,by="terms",step=1000)
+RsquareAdj(rda_3)$r.squared
+RsquareAdj(rda_3)$adj.r.squared
+
+plot(rda_2,display=c("sp","lc","cn"), main ="Triplot RDA")
+
+#bacteriodetes
+bacteriodetes<-abund_hell[,c(2)]
+bacteriodetes<-data.frame(bacteriodetes)
+colnames(bacteriodetes)<-"bacteriodetes"
+view(bacteriodetes)
+
+rda_hellbacteriodetes<-rda(bacteriodetes~.,metadata)
+summary(rda_hell)
+
+RsquareAdj(rda_hell)$r.squared
+
+RsquareAdj(rda_hell)$adj.r.squared
+
+anova(rda_hellbacteriodetes,step=1000)
+anova(rda_hellbacteriodetes,by="axis",step=1000)
+anova(rda_hellbacteriodetes,by="terms",step=1000)
+
+step_forward<-ordistep(rda(bacteriodetes~1,data=metadata),
+  scope=formula(rda_hell),direction="forward",pstep=1000)
+
+step_forward<-ordiR2step(rda(abund_hell~1,data=metadata),
+  scope=formula(rda_hell),direction="forward",pstep=1000)
+
+
+rda_2<-rda ~ hIL18p + INSULIN + hIL6 + hIL10 + hACRP30 + hCD14+AST,data=metadata) 
+anova(rda_1,step=1000)
+anova(rda_1,by="terms",step=1000)
+anova(rda_1,by="axis",step=1000)
+rda_2<-rda(abund_hell ~ hIL18p + INSULIN + hIL6 + hIL10 + hACRP30 + Weight,data=metadata) 
+anova(rda_2,step=1000)
+anova(rda_2,by="terms",step=1000)
+anova(rda_2,by="axis",step=1000)
+rda_3<-rda(abund_hell ~ hIL18p + INSULIN + hIL6 + hIL10 + hACRP30 + Weight+ hCD14 +AST,data=metadata) 
+anova(rda_3,step=1000)
+anova(rda_3,by="terms",step=1000)
+
+plot(rda_2,display=c("sp","lc","cn"), main ="Triplot RDA")
+```
+library (vegan)
+
+
+
+
+```
+
+
+
