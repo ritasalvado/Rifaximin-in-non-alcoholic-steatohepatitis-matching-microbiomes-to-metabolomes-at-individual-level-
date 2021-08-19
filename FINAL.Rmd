@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+#Packages
 
 options(width=65, digits=4)
 library(XLConnect)
@@ -55,7 +56,10 @@ install.packages("HMP")
 library("HMP")
 library(speaq)
 
-View(data_rita)
+#Data import
+library(readxl)
+rita_data <- read_excel("~/Desktop/imperial college/project2/rita_data.xlsx")
+
 presamples<-data_rita[,c("AA09_pre_2","JS04_pre_2", "NB12_pre_1", "KO03_pre_2", "JH02_pre_2","QA06_pre_2",
                              "PR08_pre_2","NR14_pre_1","NA05_pre", "KH10_pre", "VZ01_pre_2",
                                "JF13_pre_2", "PF11_pre_1", "MO07_pre","MM16_pre")]
